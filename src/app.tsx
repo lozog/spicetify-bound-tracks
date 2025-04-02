@@ -1,4 +1,4 @@
-const onSongChange = (data) => {
+const onSongChange = (data: Spicetify.PlayerState) => {
     const { uri } = data?.item;
 
     const mappings = getAllMappings();
@@ -9,7 +9,7 @@ const onSongChange = (data) => {
     }
 };
 
-const addPlayNext = async (uris) => {
+const addPlayNext = async (uris: string[]) => {
     await Spicetify.addToQueue(uris.map((uri) => ({ uri })));
 
     // what is before?
@@ -30,11 +30,11 @@ const addPlayNext = async (uris) => {
     }
 };
 
-function addSongMapping(currentSongUri, addToPlayNextUri) {
+function addSongMapping(currentSongUri: string, addToPlayNextUri: string) {
     const STORAGE_KEY = "songMappings";
 
     const raw = Spicetify.LocalStorage.get(STORAGE_KEY);
-    let mappings = {};
+    let mappings: { [key: string]: string } = {};
 
     try {
         if (raw) {
@@ -95,7 +95,7 @@ function clearSongMappings() {
     Spicetify.LocalStorage.clear();
 }
 
-const getContextMenuItem = async (uris) => {
+const getContextMenuItem = async (uris: string[]) => {
     const { Type } = Spicetify.URI;
 
     if (
@@ -105,7 +105,7 @@ const getContextMenuItem = async (uris) => {
     )
         uris = (
             await Spicetify.Platform.PlaylistAPI.getContents(uris[0])
-        ).items.map((item) => item.uri);
+        ).items.map((item: { uri: string }) => item.uri);
 
     if (uris.length === 0) return;
     const addToPlayNextUri = uris[0];
@@ -122,7 +122,6 @@ const getContextMenuItemClear = () => {
 };
 
 async function main() {
-    console.log("app.tsx");
     // if (!started) console.time("autoQueueSongMap loaded successfully");
 
     // if (!(Spicetify.Platform && Spicetify.CosmosAsync)) {
@@ -133,12 +132,13 @@ async function main() {
     //   await new Promise(resolve => setTimeout(resolve, 100));
     // }
 
-    Spicetify.Player.addEventListener("songchange", ({ data }) =>
-        onSongChange(data)
-    );
+    Spicetify.Player.addEventListener("songchange", (event) => {
+        if (!event) return;
+        onSongChange(event.data);
+    });
 
     const { Type } = Spicetify.URI;
-    const shouldShowOption = (uris) =>
+    const shouldShowOption = (uris: string[]) =>
         uris.every((uri) =>
             [
                 Type.TRACK,
