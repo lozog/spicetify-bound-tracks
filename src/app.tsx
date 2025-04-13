@@ -1,8 +1,16 @@
+type SongMapping = {
+    sourceTrack: Spicetify.PlayerTrack;
+    boundTracks: Spicetify.PlayerTrack[];
+};
+
 const onSongChange = (data: Spicetify.PlayerState) => {
     const { uri } = data?.item;
 
     const mappings = getAllMappings();
-    const songToQueueUri = mappings[uri];
+
+    if (!mappings[uri]) return;
+
+    const songToQueueUri = mappings[uri].boundTracks[0].uri;
 
     if (songToQueueUri) {
         addPlayNext([songToQueueUri]);
@@ -12,7 +20,6 @@ const onSongChange = (data: Spicetify.PlayerState) => {
 const addPlayNext = async (uris: string[]) => {
     await Spicetify.addToQueue(uris.map((uri) => ({ uri })));
 
-    // what is before?
     const before = (Spicetify.Queue.nextTracks || []).filter(
         (track) => track.provider !== "context"
     ).length;
@@ -30,11 +37,11 @@ const addPlayNext = async (uris: string[]) => {
     }
 };
 
-function addSongMapping(currentSongUri: string, addToPlayNextUri: string) {
+function addSongMapping(sourceSongUri: string, addToPlayNextUri: SongMapping) {
     const STORAGE_KEY = "songMappings";
 
     const raw = Spicetify.LocalStorage.get(STORAGE_KEY);
-    let mappings: { [key: string]: string } = {};
+    let mappings: { [key: string]: SongMapping } = {};
 
     try {
         if (raw) {
@@ -46,7 +53,7 @@ function addSongMapping(currentSongUri: string, addToPlayNextUri: string) {
         );
     }
 
-    mappings[currentSongUri] = addToPlayNextUri;
+    mappings[sourceSongUri] = addToPlayNextUri;
 
     Spicetify.LocalStorage.set(STORAGE_KEY, JSON.stringify(mappings));
 }
@@ -55,7 +62,7 @@ function printSongMappings() {
     const STORAGE_KEY = "songMappings";
 
     const raw = Spicetify.LocalStorage.get(STORAGE_KEY);
-    console.log("raw", raw);
+    // console.log("raw", raw);
     if (!raw) {
         console.log("No song mappings found.");
         return;
@@ -65,20 +72,20 @@ function printSongMappings() {
         const mappings = JSON.parse(raw);
         console.log("Current Song Mappings:");
         for (const [from, to] of Object.entries(mappings)) {
-            console.log(`${from} → ${to}`);
+            console.log(`${from} → ${to}`); // TODO: to is an object
         }
     } catch (e) {
         console.error("Failed to parse songMappings from LocalStorage:", e);
     }
 }
 
-function getAllMappings() {
+function getAllMappings(): Record<string, SongMapping> {
     const STORAGE_KEY = "songMappings";
 
     const raw = Spicetify.LocalStorage.get(STORAGE_KEY);
     if (!raw) {
         console.log("No song mappings found.");
-        return;
+        return {};
     }
 
     try {
@@ -87,12 +94,19 @@ function getAllMappings() {
         return mappings;
     } catch (e) {
         console.error("Failed to parse songMappings from LocalStorage:", e);
-        return [];
+        return {};
     }
 }
 
 function clearSongMappings() {
     Spicetify.LocalStorage.clear();
+}
+
+async function getTrackMetadata(uri: string) {
+    const base62 = uri.split(":")[2];
+    return await Spicetify.CosmosAsync.get(
+        `https://api.spotify.com/v1/tracks/${base62}`
+    );
 }
 
 const getContextMenuItem = async (uris: string[]) => {
@@ -110,11 +124,19 @@ const getContextMenuItem = async (uris: string[]) => {
     if (uris.length === 0) return;
     const addToPlayNextUri = uris[0];
     const currentSongUri = Spicetify.Player?.data?.item?.uri;
-    console.log("mapping", currentSongUri, "to", addToPlayNextUri);
-    if (addToPlayNextUri == currentSongUri) return; // don't map song to itself
 
-    addSongMapping(currentSongUri, addToPlayNextUri);
-    printSongMappings();
+    // don't map song to itself
+    if (addToPlayNextUri == currentSongUri) return;
+
+    const currentTrack = Spicetify.Player?.data.item;
+    const addToPlayNextTrack = await getTrackMetadata(uris[0]);
+    const newMappingDestination: SongMapping = {
+        sourceTrack: currentTrack,
+        boundTracks: [addToPlayNextTrack],
+    };
+
+    addSongMapping(currentSongUri, newMappingDestination);
+    // printSongMappings();
 };
 
 const getContextMenuItemClear = () => {
@@ -122,33 +144,40 @@ const getContextMenuItemClear = () => {
 };
 
 class CardContainer extends HTMLElement {
-    constructor(info) {
+    constructor(info: SongMapping) {
         super();
-        console.log("creating CardContainer for", info);
+        // console.log("creating CardContainer for", info);
 
+        const { sourceTrack, boundTracks } = info;
+
+        // const sourceImageUrl = sourceTrack.images?.[1].url;
+        const boundTrack = boundTracks[0];
+        // const boundImageUrl = boundTrack.images?.[1].url;
+
+        // ${
+        //     sourceImageUrl && false
+        //         ? `<img aria-hidden="false" draggable="false" loading="eager" src="${sourceImageUrl}" alt="${sourceTrack.name}" class="bookmark-card-image">`
+        //         : ""
+        // }
+
+        // TODO: turn this into JSX
         this.innerHTML = `
             <style>
-            .bookmark-card .ButtonInner-md-iconOnly:hover {
-            transform: scale(1.06);
-            }
+                .bookmark-card .ButtonInner-md-iconOnly:hover {
+                    transform: scale(1.06);
+                }
             </style>
             <div class="bookmark-card">
-            ${
-                info.imageUrl
-                    ? `<img aria-hidden="false" draggable="false" loading="eager" src="${info.imageUrl}" alt="${info.title}" class="bookmark-card-image">`
-                    : ""
-            }
-            <div class="bookmark-card-info">
-                <div class="main-type-balladBold"><span>${
-                    info.title
-                }</span></div>
-                <div class="main-type-mesto"><span>${
-                    info.description
-                }</span></div>
-            </div>
-            <button class="bookmark-controls" data-tippy-content="Remove binding"><svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor">${
-                Spicetify.SVGIcons.x
-            }</svg></button>
+                <div class="bookmark-card-info">
+                    <div><span>${sourceTrack.name}</span></div>
+                    <div><span>${sourceTrack.artists?.[0].name}</span></div>
+                </div>
+                <span> -> </span>
+                <div class="bookmark-card-info">
+                    <div><span>${boundTrack.name}</span></div>
+                    <div><span>${boundTrack.artists?.[0].name}</span></div>
+                </div>
+                <button class="bookmark-controls" data-tippy-content="Remove binding"><svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor">${Spicetify.SVGIcons.x}</svg></button>
             </div>
         `;
 
@@ -157,15 +186,13 @@ class CardContainer extends HTMLElement {
             Spicetify.TippyProps
         );
 
-        // const controls = this.querySelector(".bookmark-controls");
-        // controls?.onclick = (event) => {
-        //     LIST.removeFromStorage(info.id);
-        //     event.stopPropagation();
-        // };
-
-        this.onclick = () => {
-            console.log("onclick");
-        };
+        // const removeBindingButton = this.querySelector(".bookmark-controls");
+        // if (removeBindingButton) {
+        //     removeBindingButton.onclick = (event) => {
+        //         // TODO: remove mapping
+        //         event.stopPropagation();
+        //     };
+        // }
     }
 }
 
@@ -188,15 +215,14 @@ class BoundTracksCollection {
 
     apply() {
         this.items.textContent = ""; // Remove all childs
-        // this.items.append(createMenuItem("Current page", storeThisPage));
 
         const collection = getAllMappings();
-        for (const item of Object.entries(collection)) {
-            this.items.append(new CardContainer(item));
+        for (const songMapping of Object.values(collection)) {
+            this.items.append(new CardContainer(songMapping));
         }
     }
 
-    changePosition(x, y) {
+    changePosition(x: number, y: number) {
         this.items.style.left = `${x}px`;
         this.items.style.top = `${y + 40}px`;
     }
@@ -229,21 +255,24 @@ function createMenu() {
         #bookmark-menu {
             display: inline-block;
             width: 25%;
-            min-width: 380px;
+            min-width: 500px;
             max-height: 70%;
             overflow: hidden auto;
             padding-bottom: 10px;
             position: absolute;
             z-index: 5001;
         }
-            .bookmark-card {
+        .bookmark-menu-title {
+            font-size: 16px;
+        }
+        .bookmark-card {
             display: flex;
             flex-direction: row;
-            justify-content: flex-start;
+            // justify-content: flex-start;
             align-items: center;
-            margin-top: 20px;
-            cursor: pointer;
-            padding: 0 10px;
+            // margin-top: 10px;
+            // cursor: pointer;
+            // padding: 0 10px;
         }
         .bookmark-card-image {
             width: 70px;
@@ -253,12 +282,12 @@ function createMenu() {
             border-radius: 4px;
         }
         .bookmark-card-info {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: flex-start;
-            width: 100%;
-            padding: 10px 20px;
+            // display: flex;
+            // flex-direction: column;
+            // justify-content: center;
+            // align-items: flex-start;
+            // width: 100%;
+            padding: 10px 10px;
             color: var(--spice-text);
         }
         .bookmark-card-info span {
@@ -268,17 +297,6 @@ function createMenu() {
             white-space: normal;
             overflow: hidden;
             text-overflow: ellipsis;
-        }
-        .bookmark-filter {
-            margin-top: 7px;
-            margin-left: 8px;
-            border-radius: 4px;
-            padding: 0 8px 0 12px;
-            height: 32px;
-            align-items: center;
-            background-color: transparent;
-            border: 0;
-            color: var(--spice-text);
         }
         .bookmark-controls {
             margin: 10px 0 10px 10px;
@@ -294,30 +312,6 @@ function createMenu() {
             justify-content: center;
             padding: 8px;
         }
-        .bookmark-fixed-height {
-            height: 30px;
-            display: flex;
-            align-items: center;
-        }
-        .bookmark-progress {
-            overflow: hidden;
-            width: 100px;
-            height: 4px;
-            border-radius: 2px;
-            background-color: rgba(var(--spice-rgb-text), .2);
-        }
-
-        .bookmark-progress__bar {
-            --progress: 0;
-            width: calc(var(--progress) * 100%);
-            height: 4px;
-            background-color: var(--spice-text);
-        }
-
-        .bookmark-progress__time {
-            padding-left: 5px;
-            color: var(--spice-subtext);
-        }
     `;
 
     const menu = document.createElement("ul");
@@ -330,34 +324,12 @@ function createMenu() {
     return { container, menu };
 }
 
-function createMenuItem(title, callback) {
-    const wrapper = document.createElement("div");
-    Spicetify.ReactDOM.render(
-        Spicetify.React.createElement(
-            Spicetify.ReactComponent.MenuItem,
-            {
-                onClick: () => {
-                    callback?.();
-                },
-            },
-            title
-        ),
-        wrapper
-    );
-
-    return wrapper;
-}
-
 async function main() {
-    // if (!started) console.time("autoQueueSongMap loaded successfully");
-
-    // if (!(Spicetify.Platform && Spicetify.CosmosAsync)) {
-    //     setTimeout(() => autoQueueSongMap(true), 300);
-    //     return;
-    // }
-    // while (!Spicetify?.showNotification) {
-    //   await new Promise(resolve => setTimeout(resolve, 100));
-    // }
+    const { CosmosAsync, Player, LocalStorage, ContextMenu, URI } = Spicetify;
+    if (!(CosmosAsync && URI)) {
+        setTimeout(main, 300);
+        return;
+    }
 
     Spicetify.Player.addEventListener("songchange", (event) => {
         if (!event) return;
@@ -392,16 +364,30 @@ async function main() {
     customElements.define("bookmark-card-container", CardContainer);
     const LIST = new BoundTracksCollection();
 
-    new Spicetify.Topbar.Button("Bound Tracks", "home", (self) => {
-        const bound = self.element.getBoundingClientRect();
-        LIST.changePosition(bound.left, bound.top);
-        document.body.append(LIST.container);
-        LIST.setScroll();
-    });
+    new Spicetify.Topbar.Button(
+        "Bound Tracks",
+        // TODO: fix icon
+        `<svg height="32px" width="32px" version="1.1" id="XMLID_127_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+            viewBox="0 0 24 24" xml:space="preserve">
+            <g id="connect">
+                <g>
+                    <path d="M5.9,24c-1.6,0-3.1-0.6-4.2-1.7C0.6,21.2,0,19.7,0,18.1c0-1.6,0.6-3.1,1.7-4.2l3.8-3.8l2,2l2.8-2.8l1.4,1.4l-2.8,2.8
+                        l1.6,1.6l2.8-2.8l1.4,1.4l-2.8,2.8l2,2l-3.7,3.8C9,23.3,7.5,24,5.9,24z M5.5,12.9l-2.3,2.3C2.4,16,2,17,2,18s0.4,2,1.2,2.8
+                        c1.5,1.5,4.1,1.5,5.6,0l2.3-2.4L5.5,12.9z M18.5,13.9l-8.4-8.4l3.7-3.8C14.9,0.6,16.5,0,18,0c1.5,0,3,0.6,4.2,1.7
+                        C23.4,2.8,24,4.3,24,5.9s-0.6,3.1-1.7,4.2L18.5,13.9z M13,5.5l5.5,5.5l2.3-2.3C21.6,7.9,22,7,22,5.9c0-1-0.4-2-1.2-2.8
+                        c-1.5-1.5-4-1.5-5.6,0L13,5.5z"/>
+                </g>
+            </g>
+        </svg>`,
+        (self) => {
+            const bound = self.element.getBoundingClientRect();
+            LIST.changePosition(bound.left, bound.top);
+            document.body.append(LIST.container);
+            LIST.setScroll();
+        }
+    );
 
-    console.log("mappings", getAllMappings());
-
-    // console.timeEnd("autoQueueSongMap loaded successfully");
+    // console.log("mappings", getAllMappings());
 }
 
 export default main;
