@@ -58,25 +58,25 @@ function addSongMapping(sourceSongUri: string, addToPlayNextUri: SongMapping) {
     Spicetify.LocalStorage.set(STORAGE_KEY, JSON.stringify(mappings));
 }
 
-function printSongMappings() {
+function removeSongMapping(uri: string) {
     const STORAGE_KEY = "songMappings";
 
     const raw = Spicetify.LocalStorage.get(STORAGE_KEY);
-    // console.log("raw", raw);
-    if (!raw) {
-        console.log("No song mappings found.");
-        return;
-    }
+    let mappings: { [key: string]: SongMapping } = {};
 
     try {
-        const mappings = JSON.parse(raw);
-        console.log("Current Song Mappings:");
-        for (const [from, to] of Object.entries(mappings)) {
-            console.log(`${from} → ${to}`); // TODO: to is an object
+        if (raw) {
+            mappings = JSON.parse(raw);
         }
     } catch (e) {
-        console.error("Failed to parse songMappings from LocalStorage:", e);
+        console.warn(
+            "Failed to parse songMappings from LocalStorage, starting fresh."
+        );
     }
+
+    delete mappings[uri];
+
+    Spicetify.LocalStorage.set(STORAGE_KEY, JSON.stringify(mappings));
 }
 
 function getAllMappings(): Record<string, SongMapping> {
@@ -186,13 +186,15 @@ class CardContainer extends HTMLElement {
             Spicetify.TippyProps
         );
 
-        // const removeBindingButton = this.querySelector(".bookmark-controls");
-        // if (removeBindingButton) {
-        //     removeBindingButton.onclick = (event) => {
-        //         // TODO: remove mapping
-        //         event.stopPropagation();
-        //     };
-        // }
+        const removeBindingButton: HTMLButtonElement | null =
+            this.querySelector(".bookmark-controls");
+        if (removeBindingButton) {
+            removeBindingButton.onclick = (event) => {
+                console.log("remove", sourceTrack.uri);
+                removeSongMapping(sourceTrack.uri);
+                event.stopPropagation();
+            };
+        }
     }
 }
 
