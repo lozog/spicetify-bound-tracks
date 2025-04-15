@@ -37,6 +37,7 @@ const addPlayNext = async (uris: string[]) => {
     }
 };
 
+// TODO: rename
 function addSongMapping(sourceSongUri: string, addToPlayNextUri: SongMapping) {
     const STORAGE_KEY = "songMappings";
 
@@ -105,7 +106,10 @@ async function getTrackMetadata(uri: string) {
     );
 }
 
-const getContextMenuItem = async (uris: string[]) => {
+const onClickContextMenuItem = async (
+    uris: string[],
+    boundTracksCollection: BoundTracksCollection
+) => {
     const { Type } = Spicetify.URI;
 
     if (
@@ -117,6 +121,7 @@ const getContextMenuItem = async (uris: string[]) => {
             await Spicetify.Platform.PlaylistAPI.getContents(uris[0])
         ).items.map((item: { uri: string }) => item.uri);
 
+    // TODO: what if length > 1?
     if (uris.length === 0) return;
     const addToPlayNextUri = uris[0];
     const currentSongUri = Spicetify.Player?.data?.item?.uri;
@@ -132,11 +137,15 @@ const getContextMenuItem = async (uris: string[]) => {
     };
 
     addSongMapping(currentSongUri, newMappingDestination);
+    boundTracksCollection.apply();
     // printSongMappings();
 };
 
 class CardContainer extends HTMLElement {
-    constructor(info: SongMapping) {
+    constructor(
+        info: SongMapping,
+        boundTracksCollection: BoundTracksCollection
+    ) {
         super();
         // console.log("creating CardContainer for", info);
 
@@ -184,6 +193,7 @@ class CardContainer extends HTMLElement {
             removeBindingButton.onclick = (event) => {
                 console.log("remove", sourceTrack.uri);
                 removeSongMapping(sourceTrack.uri);
+                boundTracksCollection.apply();
                 event.stopPropagation();
             };
         }
@@ -212,7 +222,7 @@ class BoundTracksCollection {
 
         const collection = getAllMappings();
         for (const songMapping of Object.values(collection)) {
-            this.items.append(new CardContainer(songMapping));
+            this.items.append(new CardContainer(songMapping, this));
         }
     }
 
@@ -337,7 +347,9 @@ async function main() {
 
     new Spicetify.ContextMenu.Item(
         "Always play this after the current song",
-        getContextMenuItem,
+        (uris: string[]) => {
+            onClickContextMenuItem(uris, boundTracksCollection);
+        },
         shouldShowOption
     ).register();
 
