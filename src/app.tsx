@@ -173,7 +173,7 @@ class CardContainer extends HTMLElement {
                     <div><span>${sourceTrack.name}</span></div>
                     <div><span>${sourceTrack.artists?.[0].name}</span></div>
                 </div>
-                <span> -> </span>
+                <span class="bookmark-card-arrow"> -> </span>
                 <div class="bookmark-card-info">
                     <div><span>${boundTrack.name}</span></div>
                     <div><span>${boundTrack.artists?.[0].name}</span></div>
@@ -191,7 +191,7 @@ class CardContainer extends HTMLElement {
             this.querySelector(".bookmark-controls");
         if (removeBindingButton) {
             removeBindingButton.onclick = (event) => {
-                console.log("remove", sourceTrack.uri);
+                // console.log("remove", sourceTrack.uri);
                 removeSongMapping(sourceTrack.uri);
                 boundTracksCollection.apply();
                 event.stopPropagation();
@@ -262,21 +262,19 @@ function createMenu() {
             min-width: 500px;
             max-height: 70%;
             overflow: hidden auto;
-            padding-bottom: 10px;
             position: absolute;
             z-index: 5001;
+            padding: 8px;
         }
-        .bookmark-menu-title {
-            font-size: 16px;
+        bookmark-card-container:last-child .bookmark-card {
+            border: none;
+            margin: 0;
         }
         .bookmark-card {
-            display: flex;
-            flex-direction: row;
-            // justify-content: flex-start;
-            align-items: center;
-            // margin-top: 10px;
-            // cursor: pointer;
-            // padding: 0 10px;
+            display: grid;
+            grid-template-columns: 1fr 24px 1fr 42px;
+            margin-bottom: 8px;
+            border-bottom: solid 1px #7f7f7f;
         }
         .bookmark-card-image {
             width: 70px;
@@ -286,21 +284,12 @@ function createMenu() {
             border-radius: 4px;
         }
         .bookmark-card-info {
-            // display: flex;
-            // flex-direction: column;
-            // justify-content: center;
-            // align-items: flex-start;
-            // width: 100%;
             padding: 10px 10px;
             color: var(--spice-text);
         }
-        .bookmark-card-info span {
-            -webkit-line-clamp: 1;
-            -webkit-box-orient: vertical;
-            display: -webkit-box;
-            white-space: normal;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        .bookmark-card-arrow {
+            display: flex;
+            align-items: center;
         }
         .bookmark-controls {
             margin: 10px 0 10px 10px;
