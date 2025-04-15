@@ -319,8 +319,7 @@ function createMenu() {
 }
 
 async function main() {
-    const { CosmosAsync, Player, LocalStorage, ContextMenu, URI } = Spicetify;
-    if (!(CosmosAsync && URI)) {
+    if (!(Spicetify.CosmosAsync && Spicetify.URI)) {
         setTimeout(main, 300);
         return;
     }
@@ -333,14 +332,7 @@ async function main() {
     const { Type } = Spicetify.URI;
     const shouldShowOption = (uris: string[]) =>
         uris.every((uri) =>
-            [
-                Type.TRACK,
-                // Type.PLAYLIST,
-                // Type.PLAYLIST_V2,
-                // Type.ALBUM,
-                // Type.LOCAL,
-                // Type.EPISODE,
-            ].includes(Spicetify.URI.fromString(uri).type)
+            [Type.TRACK].includes(Spicetify.URI.fromString(uri).type)
         );
 
     new Spicetify.ContextMenu.Item(
@@ -350,7 +342,7 @@ async function main() {
     ).register();
 
     customElements.define("bookmark-card-container", CardContainer);
-    const LIST = new BoundTracksCollection();
+    const boundTracksCollection = new BoundTracksCollection();
 
     new Spicetify.Topbar.Button(
         "Bound Tracks",
@@ -369,13 +361,11 @@ async function main() {
         </svg>`,
         (self) => {
             const bound = self.element.getBoundingClientRect();
-            LIST.changePosition(bound.left, bound.top);
-            document.body.append(LIST.container);
-            LIST.setScroll();
+            boundTracksCollection.changePosition(bound.left, bound.top);
+            document.body.append(boundTracksCollection.container);
+            boundTracksCollection.setScroll();
         }
     );
-
-    // console.log("mappings", getAllMappings());
 }
 
 export default main;
