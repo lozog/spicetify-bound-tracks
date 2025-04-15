@@ -98,10 +98,6 @@ function getAllMappings(): Record<string, SongMapping> {
     }
 }
 
-function clearSongMappings() {
-    Spicetify.LocalStorage.clear();
-}
-
 async function getTrackMetadata(uri: string) {
     const base62 = uri.split(":")[2];
     return await Spicetify.CosmosAsync.get(
@@ -137,10 +133,6 @@ const getContextMenuItem = async (uris: string[]) => {
 
     addSongMapping(currentSongUri, newMappingDestination);
     // printSongMappings();
-};
-
-const getContextMenuItemClear = () => {
-    clearSongMappings();
 };
 
 class CardContainer extends HTMLElement {
@@ -354,12 +346,6 @@ async function main() {
     new Spicetify.ContextMenu.Item(
         "Always play this after the current song",
         getContextMenuItem,
-        shouldShowOption
-    ).register();
-
-    new Spicetify.ContextMenu.Item(
-        "Clear always play next Queue",
-        getContextMenuItemClear,
         shouldShowOption
     ).register();
 
