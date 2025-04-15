@@ -148,35 +148,20 @@ class CardContainer extends HTMLElement {
     ) {
         super();
         // console.log("creating CardContainer for", info);
-
         const { sourceTrack, boundTracks } = info;
-
-        // const sourceImageUrl = sourceTrack.images?.[1].url;
         const boundTrack = boundTracks[0];
-        // const boundImageUrl = boundTrack.images?.[1].url;
-
-        // ${
-        //     sourceImageUrl && false
-        //         ? `<img aria-hidden="false" draggable="false" loading="eager" src="${sourceImageUrl}" alt="${sourceTrack.name}" class="bookmark-card-image">`
-        //         : ""
-        // }
 
         // TODO: turn this into JSX
         this.innerHTML = `
-            <style>
-                .bookmark-card .ButtonInner-md-iconOnly:hover {
-                    transform: scale(1.06);
-                }
-            </style>
             <div class="bookmark-card">
                 <div class="bookmark-card-info">
-                    <div><span>${sourceTrack.name}</span></div>
-                    <div><span>${sourceTrack.artists?.[0].name}</span></div>
+                    <div class="bookmark-card-title">${sourceTrack.name}</div>
+                    <div class="bookmark-card-artist">${sourceTrack.artists?.[0].name}</div>
                 </div>
                 <span class="bookmark-card-arrow"> -> </span>
                 <div class="bookmark-card-info">
-                    <div><span>${boundTrack.name}</span></div>
-                    <div><span>${boundTrack.artists?.[0].name}</span></div>
+                    <div class="bookmark-card-title">${boundTrack.name}</div>
+                    <div class="bookmark-card-artist">${boundTrack.artists?.[0].name}</div>
                 </div>
                 <button class="bookmark-controls" data-tippy-content="Remove binding"><svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor">${Spicetify.SVGIcons.x}</svg></button>
             </div>
@@ -290,6 +275,14 @@ function createMenu() {
         .bookmark-card-arrow {
             display: flex;
             align-items: center;
+        }
+        .bookmark-card-title {
+            color: var(--text-base);
+            font-size: var(--encore-text-size-base);
+        }
+        .bookmark-card-artist {
+            color: var(--text-subdued);
+            font-size: var(--encore-text-size-smaller);
         }
         .bookmark-controls {
             margin: 10px 0 10px 10px;
