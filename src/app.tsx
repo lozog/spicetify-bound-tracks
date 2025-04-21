@@ -3,7 +3,7 @@ type SongMapping = {
     boundTracks: Spicetify.PlayerTrack[];
 };
 
-const onSongChange = (data: Spicetify.PlayerState) => {
+const onSongChange = async (data: Spicetify.PlayerState) => {
     const { uri } = data?.item;
 
     const mappings = getAllMappings();
@@ -12,9 +12,16 @@ const onSongChange = (data: Spicetify.PlayerState) => {
 
     const songToQueueUri = mappings[uri].boundTracks[0].uri;
 
-    if (songToQueueUri) {
-        addPlayNext([songToQueueUri]);
-    }
+    setTimeout(async () => {
+        const queueData = await Spicetify.Platform.PlayerAPI.getQueue();
+        const isSongAlreadyQueued =
+            queueData.nextUp?.[0]?.uri === songToQueueUri ||
+            queueData.queued?.[0]?.uri === songToQueueUri;
+
+        if (songToQueueUri && !isSongAlreadyQueued) {
+            addPlayNext([songToQueueUri]);
+        }
+    }, 250); // delay needed so that we get new queue data (i.e. after song change occurs)
 };
 
 const addPlayNext = async (uris: string[]) => {
