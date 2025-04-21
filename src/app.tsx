@@ -128,13 +128,18 @@ const onClickContextMenuItem = async (
             await Spicetify.Platform.PlaylistAPI.getContents(uris[0])
         ).items.map((item: { uri: string }) => item.uri);
 
-    // TODO: what if length > 1?
     if (uris.length === 0) return;
+    if (uris.length > 1) {
+        Spicetify.showNotification(
+            "Warning (Bound Tracks): Only binding the first track selected"
+        );
+    }
+
     const addToPlayNextUri = uris[0];
     const currentSongUri = Spicetify.Player?.data?.item?.uri;
 
     // don't map song to itself
-    if (addToPlayNextUri == currentSongUri) return;
+    if (addToPlayNextUri === currentSongUri) return;
 
     const currentTrack = Spicetify.Player?.data.item;
     const addToPlayNextTrack = await getTrackMetadata(uris[0]);
