@@ -1,99 +1,17 @@
-(async function() {
-        while (!Spicetify.React || !Spicetify.ReactDOM) {
-          await new Promise(resolve => setTimeout(resolve, 10));
-        }
-        var boundDtracks = (() => {
-  // src/storage.ts
-  function addSongMapping(sourceSongUri, addToPlayNextUri) {
-    const STORAGE_KEY = "songMappings";
-    const raw = Spicetify.LocalStorage.get(STORAGE_KEY);
-    let mappings = {};
-    try {
-      if (raw) {
-        mappings = JSON.parse(raw);
-      }
-    } catch (e) {
-      console.warn(
-        "Failed to parse songMappings from LocalStorage, starting fresh."
-      );
-    }
-    mappings[sourceSongUri] = addToPlayNextUri;
-    Spicetify.LocalStorage.set(STORAGE_KEY, JSON.stringify(mappings));
-  }
-  function removeSongMapping(uri) {
-    const STORAGE_KEY = "songMappings";
-    const raw = Spicetify.LocalStorage.get(STORAGE_KEY);
-    let mappings = {};
-    try {
-      if (raw) {
-        mappings = JSON.parse(raw);
-      }
-    } catch (e) {
-      console.warn(
-        "Failed to parse songMappings from LocalStorage, starting fresh."
-      );
-    }
-    delete mappings[uri];
-    Spicetify.LocalStorage.set(STORAGE_KEY, JSON.stringify(mappings));
-  }
-  function getAllMappings() {
-    const STORAGE_KEY = "songMappings";
-    const raw = Spicetify.LocalStorage.get(STORAGE_KEY);
-    if (!raw) {
-      console.log("No song mappings found.");
-      return {};
-    }
-    try {
-      const mappings = JSON.parse(raw);
-      return mappings;
-    } catch (e) {
-      console.error("Failed to parse songMappings from LocalStorage:", e);
-      return {};
-    }
-  }
-
-  // src/BoundTracksCollection.ts
-  var CardContainer = class extends HTMLElement {
-    constructor(info, boundTracksCollection) {
-      var _a, _b;
-      super();
-      const { sourceTrack, boundTracks } = info;
-      const boundTrack = boundTracks[0];
-      this.innerHTML = `
+(async()=>{for(;!Spicetify.React||!Spicetify.ReactDOM;)await new Promise(t=>setTimeout(t,10));var a,r,n,s,t;function c(){var t=Spicetify.LocalStorage.get("songMappings");if(!t)return console.log("No song mappings found."),{};try{return JSON.parse(t)}catch(t){return console.error("Failed to parse songMappings from LocalStorage:",t),{}}}a=class extends HTMLElement{constructor(t,a){var e;super();let{sourceTrack:r,boundTracks:i}=t;t=i[0],this.innerHTML=`
             <div class="bookmark-card">
                 <div class="bookmark-card-info">
-                    <div class="bookmark-card-title">${sourceTrack.name}</div>
-                    <div class="bookmark-card-artist">${(_a = sourceTrack.artists) == null ? void 0 : _a[0].name}</div>
+                    <div class="bookmark-card-title">${r.name}</div>
+                    <div class="bookmark-card-artist">${null==(e=r.artists)?void 0:e[0].name}</div>
                 </div>
                 <span class="bookmark-card-arrow"> -> </span>
                 <div class="bookmark-card-info">
-                    <div class="bookmark-card-title">${boundTrack.name}</div>
-                    <div class="bookmark-card-artist">${(_b = boundTrack.artists) == null ? void 0 : _b[0].name}</div>
+                    <div class="bookmark-card-title">${t.name}</div>
+                    <div class="bookmark-card-artist">${null==(e=t.artists)?void 0:e[0].name}</div>
                 </div>
                 <button class="bookmark-controls" data-tippy-content="Remove binding"><svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor">${Spicetify.SVGIcons.x}</svg></button>
             </div>
-        `;
-      Spicetify.Tippy(
-        this.querySelectorAll("[data-tippy-content]"),
-        Spicetify.TippyProps
-      );
-      const removeBindingButton = this.querySelector(".bookmark-controls");
-      if (removeBindingButton) {
-        removeBindingButton.onclick = (event) => {
-          removeSongMapping(sourceTrack.uri);
-          boundTracksCollection.apply();
-          event.stopPropagation();
-        };
-      }
-    }
-  };
-  function createMenu() {
-    const container = document.createElement("div");
-    container.id = "bookmark-spicetify";
-    container.className = "context-menu-container";
-    container.style.zIndex = "1029";
-    const style = document.createElement("style");
-    style.textContent = `
+        `,Spicetify.Tippy(this.querySelectorAll("[data-tippy-content]"),Spicetify.TippyProps),t=this.querySelector(".bookmark-controls");t&&(t.onclick=t=>{{var e=r.uri,i="songMappings",o=Spicetify.LocalStorage.get(i);let t={};try{o&&(t=JSON.parse(o))}catch(t){console.warn("Failed to parse songMappings from LocalStorage, starting fresh.")}delete t[e],Spicetify.LocalStorage.set(i,JSON.stringify(t))}a.apply(),t.stopPropagation()})}},r=class{constructor(){(t=document.createElement("div")).id="bookmark-spicetify",t.className="context-menu-container",t.style.zIndex="1029",(i=document.createElement("style")).textContent=`
         #bookmark-spicetify {
             position: absolute;
             left: 0;
@@ -159,133 +77,7 @@
             justify-content: center;
             padding: 8px;
         }
-    `;
-    const menu = document.createElement("ul");
-    menu.id = "bookmark-menu";
-    menu.className = "main-contextMenu-menu";
-    menu.onclick = (e) => e.stopPropagation();
-    container.append(style, menu);
-    return { container, menu };
-  }
-  var BoundTracksCollection = class {
-    constructor() {
-      const menu = createMenu();
-      this.container = menu.container;
-      this.items = menu.menu;
-      this.lastScroll = 0;
-      this.container.onclick = () => {
-        this.storeScroll();
-        this.container.remove();
-      };
-      this.apply();
-    }
-    apply() {
-      this.items.textContent = "";
-      const collection = getAllMappings();
-      for (const songMapping of Object.values(collection)) {
-        this.items.append(new CardContainer(songMapping, this));
-      }
-    }
-    changePosition(x, y) {
-      this.items.style.left = `${x}px`;
-      this.items.style.top = `${y + 40}px`;
-    }
-    storeScroll() {
-      this.lastScroll = this.items.scrollTop;
-    }
-    setScroll() {
-      this.items.scrollTop = this.lastScroll;
-    }
-  };
-
-  // src/app.tsx
-  var onSongChange = async (data) => {
-    const { uri } = data == null ? void 0 : data.item;
-    const mappings = getAllMappings();
-    if (!mappings[uri])
-      return;
-    const songToQueueUri = mappings[uri].boundTracks[0].uri;
-    setTimeout(async () => {
-      var _a, _b, _c, _d;
-      const queueData = await Spicetify.Platform.PlayerAPI.getQueue();
-      const isSongAlreadyQueued = ((_b = (_a = queueData.nextUp) == null ? void 0 : _a[0]) == null ? void 0 : _b.uri) === songToQueueUri || ((_d = (_c = queueData.queued) == null ? void 0 : _c[0]) == null ? void 0 : _d.uri) === songToQueueUri;
-      if (songToQueueUri && !isSongAlreadyQueued) {
-        addPlayNext([songToQueueUri]);
-      }
-    }, 250);
-  };
-  var addPlayNext = async (uris) => {
-    await Spicetify.addToQueue(uris.map((uri) => ({ uri })));
-    const before = (Spicetify.Queue.nextTracks || []).filter(
-      (track) => track.provider !== "context"
-    ).length;
-    if (before) {
-      const difference = Spicetify.Queue.nextTracks.filter((track) => track.provider !== "context").filter((_, index) => index >= before);
-      await Spicetify.Platform.PlayerAPI.reorderQueue(
-        difference.map((track) => track.contextTrack),
-        { before: Spicetify.Queue.nextTracks[0].contextTrack }
-      );
-    }
-  };
-  async function getTrackMetadata(uri) {
-    const base62 = uri.split(":")[2];
-    return await Spicetify.CosmosAsync.get(
-      `https://api.spotify.com/v1/tracks/${base62}`
-    );
-  }
-  var onClickContextMenuItem = async (uris, boundTracksCollection) => {
-    var _a, _b, _c, _d;
-    const { Type } = Spicetify.URI;
-    if ([Type.PLAYLIST, Type.PLAYLIST_V2].includes(
-      Spicetify.URI.fromString(uris[0]).type
-    ))
-      uris = (await Spicetify.Platform.PlaylistAPI.getContents(uris[0])).items.map((item) => item.uri);
-    if (uris.length === 0)
-      return;
-    if (uris.length > 1) {
-      Spicetify.showNotification(
-        "Warning (Bound Tracks): Only binding the first track selected"
-      );
-    }
-    const addToPlayNextUri = uris[0];
-    const currentSongUri = (_c = (_b = (_a = Spicetify.Player) == null ? void 0 : _a.data) == null ? void 0 : _b.item) == null ? void 0 : _c.uri;
-    if (addToPlayNextUri === currentSongUri)
-      return;
-    const currentTrack = (_d = Spicetify.Player) == null ? void 0 : _d.data.item;
-    const addToPlayNextTrack = await getTrackMetadata(uris[0]);
-    const newMappingDestination = {
-      sourceTrack: currentTrack,
-      boundTracks: [addToPlayNextTrack]
-    };
-    addSongMapping(currentSongUri, newMappingDestination);
-    boundTracksCollection.apply();
-  };
-  async function main() {
-    if (!(Spicetify.CosmosAsync && Spicetify.URI)) {
-      setTimeout(main, 300);
-      return;
-    }
-    Spicetify.Player.addEventListener("songchange", (event) => {
-      if (!event)
-        return;
-      onSongChange(event.data);
-    });
-    const { Type } = Spicetify.URI;
-    const shouldShowOption = (uris) => uris.every(
-      (uri) => [Type.TRACK].includes(Spicetify.URI.fromString(uri).type)
-    );
-    new Spicetify.ContextMenu.Item(
-      "Always play this after the current song",
-      (uris) => {
-        onClickContextMenuItem(uris, boundTracksCollection);
-      },
-      shouldShowOption
-    ).register();
-    customElements.define("bookmark-card-container", CardContainer);
-    const boundTracksCollection = new BoundTracksCollection();
-    const topbarButton = new Spicetify.Topbar.Button(
-      "Bound Tracks",
-      `<svg id="connect" height="24px" width="24px" version="1.1" id="XMLID_127_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+    `,(e=document.createElement("ul")).id="bookmark-menu",e.className="main-contextMenu-menu",e.onclick=t=>t.stopPropagation(),t.append(i,e);var t,e,i={container:t,menu:e};this.container=i.container,this.items=i.menu,this.lastScroll=0,this.container.onclick=()=>{this.storeScroll(),this.container.remove()},this.apply()}apply(){this.items.textContent="";var t,e=c();for(t of Object.values(e))this.items.append(new a(t,this))}changePosition(t,e){this.items.style.left=t+"px",this.items.style.top=e+40+"px"}storeScroll(){this.lastScroll=this.items.scrollTop}setScroll(){this.items.scrollTop=this.lastScroll}},n=async t=>{await Spicetify.addToQueue(t.map(t=>({uri:t})));let i=(Spicetify.Queue.nextTracks||[]).filter(t=>"context"!==t.provider).length;i&&(t=Spicetify.Queue.nextTracks.filter(t=>"context"!==t.provider).filter((t,e)=>e>=i),await Spicetify.Platform.PlayerAPI.reorderQueue(t.map(t=>t.contextTrack),{before:Spicetify.Queue.nextTracks[0].contextTrack}))},s=async(e,t)=>{var i=Spicetify.URI.Type;if(0!==(e=[i.PLAYLIST,i.PLAYLIST_V2].includes(Spicetify.URI.fromString(e[0]).type)?(await Spicetify.Platform.PlaylistAPI.getContents(e[0])).items.map(t=>t.uri):e).length){1<e.length&&Spicetify.showNotification("Warning (Bound Tracks): Only binding the first track selected");var i=e[0],o=null==(o=null==(o=null==(o=Spicetify.Player)?void 0:o.data)?void 0:o.item)?void 0:o.uri;if(i!==o){i=null==(i=Spicetify.Player)?void 0:i.data.item;e=(e=e[0]).split(":")[2];i={sourceTrack:i,boundTracks:[await Spicetify.CosmosAsync.get("https://api.spotify.com/v1/tracks/"+e)]};{e=o;o=i;var i="songMappings",a=Spicetify.LocalStorage.get(i);let t={};try{a&&(t=JSON.parse(a))}catch(t){console.warn("Failed to parse songMappings from LocalStorage, starting fresh.")}t[e]=o,Spicetify.LocalStorage.set(i,JSON.stringify(t))}t.apply()}}},t=async function t(){if(!Spicetify.CosmosAsync||!Spicetify.URI)return void setTimeout(t,300);Spicetify.Player.addEventListener("songchange",t=>{t&&(async t=>{var t=(null==t?void 0:t.item).uri,e=c();if(e[t]){let i=e[t].boundTracks[0].uri;setTimeout(async()=>{var t=await Spicetify.Platform.PlayerAPI.getQueue(),e=(null==(e=null==(e=t.nextUp)?void 0:e[0])?void 0:e.uri)===i||(null==(t=null==(e=t.queued)?void 0:e[0])?void 0:t.uri)===i;i&&!e&&n([i])},250)}})(t.data)});let e=Spicetify.URI.Type;new Spicetify.ContextMenu.Item("Always play this after the current song",t=>{s(t,i)},t=>t.every(t=>[e.TRACK].includes(Spicetify.URI.fromString(t).type))).register(),customElements.define("bookmark-card-container",a);let i=new r;new Spicetify.Topbar.Button("Bound Tracks",`<svg id="connect" height="24px" width="24px" version="1.1" id="XMLID_127_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
             viewBox="0 0 24 24" xml:space="preserve">
             <g>
                 <path d="M5.9,24c-1.6,0-3.1-0.6-4.2-1.7C0.6,21.2,0,19.7,0,18.1c0-1.6,0.6-3.1,1.7-4.2l3.8-3.8l2,2l2.8-2.8l1.4,1.4l-2.8,2.8
@@ -294,17 +86,7 @@
                     C23.4,2.8,24,4.3,24,5.9s-0.6,3.1-1.7,4.2L18.5,13.9z M13,5.5l5.5,5.5l2.3-2.3C21.6,7.9,22,7,22,5.9c0-1-0.4-2-1.2-2.8
                     c-1.5-1.5-4-1.5-5.6,0L13,5.5z"/>
             </g>
-        </svg>`,
-      (self) => {
-        const bound = self.element.getBoundingClientRect();
-        boundTracksCollection.changePosition(bound.left, bound.top);
-        document.body.append(boundTracksCollection.container);
-        boundTracksCollection.setScroll();
-      }
-    );
-    topbarButton.element.classList.add("bound-tracks-topbar-button");
-    const style = document.createElement("style");
-    style.textContent = `
+        </svg>`,t=>{t=t.element.getBoundingClientRect(),i.changePosition(t.left,t.top),document.body.append(i.container),i.setScroll()}).element.classList.add("bound-tracks-topbar-button");var o=document.createElement("style");o.textContent=`
         #connect {
             fill: var(--text-subdued);
         }
@@ -317,15 +99,4 @@
             height: 48px;
             width: 48px;
         }
-    `;
-    document.head.append(style);
-  }
-  var app_default = main;
-
-  // ../../../../private/var/folders/57/4p0xy0jx58g37lgs7yrkt4cw0000gn/T/spicetify-creator/index.jsx
-  (async () => {
-    await app_default();
-  })();
-})();
-
-      })();
+    `,document.head.append(o)},(async()=>{await t()})()})();

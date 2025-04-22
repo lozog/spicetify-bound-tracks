@@ -3,9 +3,9 @@
     "version": "0.1.0",
     "private": true,
     "scripts": {
-        "build": "spicetify-creator --out=dist",
-        "build-local": "spicetify-creator --out=dist --minify",
-        "build-and-copy": "npm run build && cp dist/bound-tracks.js ~/.spicetify/Extensions",
+        "build": "spicetify-creator --out=dist --minify",
+        "build-local": "spicetify-creator --out=dist",
+        "build-and-copy": "npm run build-local && cp dist/bound-tracks.js ~/.spicetify/Extensions",
         "watch": "spicetify-creator --watch"
     },
     "license": "MIT",
