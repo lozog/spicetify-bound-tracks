@@ -2,6 +2,6 @@
     "name": "Bound Tracks",
     "description": "Create song mappings and auto-queue song Y if song X plays",
     "preview": "screenshots/preview.png",
-    "main": "app.tsx",
+    "main": "dist/bound-tracks.js",
     "readme": "README.md"
 }
