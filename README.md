@@ -1,6 +1,6 @@
 # Bound Tracks
 
-Create bindings between songs so that when song X plays, song Y is automatically queued next.
+Create 'bindings' between songs so that when song X plays, song Y is automatically queued next.
 
 ![Preview screenshot](screenshots/preview.png)
 
