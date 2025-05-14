@@ -7,9 +7,8 @@ const onSongChange = async (data: Spicetify.PlayerState) => {
 
     const mappings = getAllMappings();
 
-    if (!mappings[uri]) return;
-
-    const songToQueueUri = mappings[uri].boundTracks[0].uri;
+    const songToQueueUri = mappings[uri]?.boundTracks[0]?.uri;
+    if (!songToQueueUri) return;
 
     setTimeout(async () => {
         const queueData = await Spicetify.Platform.PlayerAPI.getQueue();
